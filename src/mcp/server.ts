@@ -1389,13 +1389,14 @@ server.registerTool('list_scenarios', {
             scenarios: scenarios.map((s: any) => ({
                 id: s.id,
                 name: s.name,
-                isactive: s.isactive,
+                isActive: s.isActive,
                 islinked: s.islinked,
                 isinvalid: s.isinvalid,
+                isPaused: s.isPaused,
                 scheduling: s.scheduling,
                 folderId: s.folderId,
-                createdAt: s.createdAt,
-                updatedAt: s.updatedAt,
+                created: s.created,
+                lastEdit: s.lastEdit,
             })),
         });
     } catch (error: any) {
