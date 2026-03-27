@@ -85,7 +85,14 @@ describe('MCP Server Protocol', () => {
         expect(toolNames).toContain('create_scenario');
         expect(toolNames).toContain('search_templates');
         expect(toolNames).toContain('list_apps');
-        expect(result.tools.length).toBe(8);
+        expect(toolNames).toContain('list_scenarios');
+        expect(toolNames).toContain('get_scenario');
+        expect(toolNames).toContain('get_scenario_blueprint');
+        expect(toolNames).toContain('update_scenario');
+        expect(toolNames).toContain('delete_scenario');
+        expect(toolNames).toContain('activate_scenario');
+        expect(toolNames).toContain('deactivate_scenario');
+        expect(result.tools.length).toBe(15);
     });
 
     it('should call tools_documentation', async () => {
