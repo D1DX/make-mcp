@@ -30,6 +30,7 @@
     "smoke:compat": "node scripts/smoke-compat.js",
     "test": "vitest run",
     "test:watch": "vitest",
+    "prepare": "npm run build",
     "prepublishOnly": "node scripts/prepublish.js",
     "postinstall": "node bin/postinstall.js"
   },
