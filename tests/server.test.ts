@@ -92,7 +92,8 @@ describe('MCP Server Protocol', () => {
         expect(toolNames).toContain('delete_scenario');
         expect(toolNames).toContain('activate_scenario');
         expect(toolNames).toContain('deactivate_scenario');
-        expect(result.tools.length).toBe(15);
+        expect(toolNames).toContain('run_scenario');
+        expect(result.tools.length).toBe(16);
     });
 
     it('should call tools_documentation', async () => {

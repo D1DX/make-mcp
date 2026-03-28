@@ -511,6 +511,7 @@ server.registerTool('tools_documentation', {
             delete_scenario: 'Permanently delete a scenario. Params: scenarioId.',
             activate_scenario: 'Activate a scenario. Params: scenarioId.',
             deactivate_scenario: 'Deactivate a running scenario. Params: scenarioId.',
+            run_scenario: 'Execute a scenario by ID. Params: scenarioId, data (optional input object), responsive (optional, default true).',
             search_templates: 'Search reusable scenario templates. Params: query (optional), category (optional).',
             list_apps: 'List all available apps with module counts.',
         },
@@ -1694,6 +1695,65 @@ server.registerTool('deactivate_scenario', {
         if (status === 404) return fail(`Scenario ${scenarioId} not found.`);
         if (status === 401) return fail('Authentication failed. Check your MAKE_API_KEY.');
         return fail(`Failed to deactivate scenario (HTTP ${status || 'unknown'}): ${msg}`);
+    }
+});
+
+// ══════════════════════════════════════════════════════════════
+// TOOL: run_scenario
+// ══════════════════════════════════════════════════════════════
+
+server.registerTool('run_scenario', {
+    title: 'Run Scenario',
+    description:
+        'Execute a Make.com scenario by ID. The scenario must be active (or on-demand). ' +
+        'Use list_scenarios first to find scenario IDs. Pass input data as a JSON object if the scenario expects parameters.',
+    inputSchema: {
+        scenarioId: z.number().describe('Scenario ID to run'),
+        data: z.record(z.string(), z.any()).optional().describe('Input data for the scenario (JSON object). Use get_scenario to check if it expects input.'),
+        responsive: z.boolean().optional().describe('Wait for scenario output (default: true). Set to false for fire-and-forget.'),
+    },
+}, async ({ scenarioId, data, responsive }) => {
+    try {
+        const apiKey = process.env['MAKE_API_KEY'];
+        if (!apiKey || apiKey === 'your_api_key_here') {
+            return fail('MAKE_API_KEY not configured. Set it in the .env file.');
+        }
+
+        const baseUrl = getMakeBaseUrl();
+        const body: Record<string, any> = {
+            responsive: responsive !== false,
+        };
+        if (data) body.data = data;
+
+        const response = await axios.post(`${baseUrl}/scenarios/${scenarioId}/run`, body, {
+            headers: {
+                'Authorization': `Token ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            timeout: 60000,
+        });
+
+        const result = response.data;
+        logger.info('run_scenario', { scenarioId, executionId: result?.executionId });
+
+        return ok({
+            success: true,
+            executionId: result?.executionId,
+            outputs: result?.outputs ?? null,
+            message: result?.outputs
+                ? `Scenario ${scenarioId} executed successfully with output.`
+                : `Scenario ${scenarioId} executed successfully.`,
+        });
+    } catch (error: any) {
+        const status = error.response?.status;
+        const data = error.response?.data;
+        const msg = data?.detail || data?.message || error.message;
+        logger.error('run_scenario failed', { scenarioId, error: msg, status });
+        if (status === 404) return fail(`Scenario ${scenarioId} not found.`);
+        if (status === 401) return fail('Authentication failed. Check your MAKE_API_KEY.');
+        if (status === 403) return fail('Access denied. Check your API key permissions.');
+        const detail = data ? JSON.stringify(data, null, 2) : msg;
+        return fail(`Failed to run scenario (HTTP ${status || 'unknown'}): ${detail}`);
     }
 });
 
