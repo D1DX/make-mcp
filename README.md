@@ -1,6 +1,9 @@
 # Make.com MCP Server — Full CRUD + Module Intelligence
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Author](https://img.shields.io/badge/Author-Daniel_Rudaev-000000?style=flat)](https://github.com/daniel-rudaev)
+[![Studio](https://img.shields.io/badge/Studio-D1DX-000000?style=flat)](https://d1dx.com)
+[![Make.com](https://img.shields.io/badge/Make.com-MCP_Server-6D00CC?style=flat&logo=make&logoColor=white)](https://www.make.com)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat)](./LICENSE)
 
 > **D1DX fork** of [danishashko/make-mcp](https://github.com/danishashko/make-mcp). Adds full scenario CRUD, run, activate/deactivate. Original module search, validation, and auto-healing preserved.
 
@@ -125,4 +128,4 @@ npm run start:dev               # Dev mode (tsx)
 
 Original server by [Daniel Shashko](https://github.com/danishashko/make-mcp). CRUD tools added by [D1DX](https://github.com/D1DX).
 
-MIT License.
+MIT License — Copyright (c) 2026 Daniel Rudaev @ D1DX
