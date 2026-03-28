@@ -1,171 +1,37 @@
-﻿# Make.com MCP Server — Build & Deploy Automation Scenarios with AI
+# Make.com MCP Server — Full CRUD + Module Intelligence
 
-[![npm version](https://img.shields.io/npm/v/make-mcp-server)](https://www.npmjs.com/package/make-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> **⚠️ Disclaimer:** This is an **unofficial, community-driven project** created by a passionate fan of Make.com. It is **NOT** affiliated with, endorsed by, or officially supported by Make.com. 
+> **D1DX fork** of [danishashko/make-mcp](https://github.com/danishashko/make-mcp). Adds full scenario CRUD, run, activate/deactivate. Original module search, validation, and auto-healing preserved.
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that gives AI assistants like **Claude**, **GitHub Copilot**, and **Cursor** full access to Make.com module documentation, scenario validation, and one-click deployment. Search 200+ automation modules across 40+ apps, build blueprints with auto-healing, and deploy directly to Make.com — all from your AI chat.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for **complete Make.com scenario management** from AI assistants (Claude, Copilot, Cursor). 16 tools covering module discovery, blueprint validation, scenario CRUD, execution, and deployment with auto-healing.
 
-## Features
+## What's Different from the Original
 
-- **🔍 200+ Modules** — Full-text search across 200+ Make.com modules (Slack, Gmail, Google Sheets, Notion, OpenAI, and 35+ more apps)
-- **📋 Module Details** — Retrieve parameters, types, descriptions, and usage docs for any module
-- **✅ Blueprint Validation** — Check scenarios for missing parameters, unknown modules, structural issues, and router sub-routes before deploying
-- **🛡️ Account-Aware Compatibility** — Verify module IDs against your live Make account/region before deployment to prevent "Module not found" scenarios
-- **🚀 Deploy to Make.com** — Push validated blueprints directly to Make.com via API
-- **🩹 Auto-Healing** — Automatically fixes LLM-generated blueprints: injects missing `metadata`, adds `designer` coordinates, strips unsupported properties like router `filter`
-- **🔀 Router Support** — Full support for `builtin:BasicRouter` with multiple routes and recursive validation
-- **📚 Scenario Templates** — Browse reusable scenario templates for common workflows
-- **📖 Guided Prompts** — MCP prompts for guided scenario building and module exploration
-- **📊 Resource Catalog** — MCP resources for browsing available apps
-- **🧪 43 Tests** — Unit + integration test suite with Vitest
-- **⚡ Fast Response** — Optimized SQLite with FTS5 full-text search
+| Capability | Original | This Fork |
+|-----------|----------|-----------|
+| Search modules | Yes | Yes |
+| Validate blueprints | Yes | Yes |
+| Create scenarios | Yes | Yes (with auto-healing) |
+| List scenarios | No | **Yes** |
+| Get scenario details | No | **Yes** |
+| Get scenario blueprint | No | **Yes** |
+| Update scenarios | No | **Yes** |
+| Delete scenarios | No | **Yes** |
+| Activate/deactivate | No | **Yes** |
+| Run scenarios | No | **Yes** |
 
----
-
-## 🚀 Quick Start — Self-Hosting Options
-
-### Option A: npx (No Installation Needed!) 🚀
-
-The fastest way to get started — no cloning, no building:
-
-**Prerequisites:** [Node.js](https://nodejs.org/) installed on your system
-
-```bash
-# Run directly — no installation needed!
-npx -y make-mcp-server
-```
-
-The package includes a pre-built database with all 200+ Make.com modules. Just add it to your MCP client config and go.
-
-**Claude Desktop config** (`claude_desktop_config.json`):
-
-Basic configuration (documentation tools only):
+## Quick Start
 
 ```json
 {
   "mcpServers": {
-    "make-mcp-server": {
+    "make": {
       "command": "npx",
-      "args": ["-y", "make-mcp-server"],
+      "args": ["-y", "github:D1DX/make-mcp"],
       "env": {
-        "LOG_LEVEL": "error"
-      }
-    }
-  }
-}
-```
-
-Full configuration (with Make.com deployment):
-
-```json
-{
-  "mcpServers": {
-    "make-mcp-server": {
-      "command": "npx",
-      "args": ["-y", "make-mcp-server"],
-      "env": {
-        "LOG_LEVEL": "error",
-        "MAKE_API_KEY": "your_api_key_here",
-        "MAKE_TEAM_ID": "your_team_id",
-        "MAKE_API_URL": "https://eu1.make.com/api/v2"
-      }
-    }
-  }
-}
-```
-
-> **Note:** npx will download and cache the latest version automatically. The package includes a pre-built database with all Make.com module information — no setup required.
-
----
-
-### Option B: Docker (Isolated & Reproducible) 🐳
-
-**Prerequisites:** Docker installed on your system
-
-```bash
-# Build the Docker image
-docker build -t make-mcp-server .
-
-# Test it works
-echo '{"jsonrpc":"2.0","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}},"id":1}' | docker run -i --rm make-mcp-server
-```
-
-**Claude Desktop config:**
-
-Basic configuration (documentation tools only):
-
-```json
-{
-  "mcpServers": {
-    "make-mcp-server": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm", "--init",
-        "-e", "LOG_LEVEL=error",
-        "make-mcp-server"
-      ]
-    }
-  }
-}
-```
-
-Full configuration (with Make.com deployment):
-
-```json
-{
-  "mcpServers": {
-    "make-mcp-server": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm", "--init",
-        "-e", "LOG_LEVEL=error",
-        "-e", "MAKE_API_KEY=your_api_key_here",
-        "-e", "MAKE_TEAM_ID=your_team_id",
-        "-e", "MAKE_API_URL=https://eu1.make.com/api/v2",
-        "make-mcp-server"
-      ]
-    }
-  }
-}
-```
-
-> **Important:** The `-i` flag is required for MCP stdio communication.
-
----
-
-### Option C: Local Installation (For Development) 🛠️
-
-**Prerequisites:** [Node.js](https://nodejs.org/) and Git
-
-```bash
-# 1. Clone and install
-git clone https://github.com/danishashko/make-mcp.git
-cd make-mcp
-npm install
-
-# 2. Build
-npm run build
-
-# 3. Populate the module database (already done if using npm package)
-npm run scrape:prod
-
-# 4. Test it works
-npm start
-```
-
-**Claude Desktop config:**
-
-```json
-{
-  "mcpServers": {
-    "make-mcp-server": {
-      "command": "node",
-      "args": ["/absolute/path/to/make-mcp/dist/mcp/server.js"],
-      "env": {
-        "LOG_LEVEL": "error",
-        "MAKE_API_KEY": "your_api_key_here",
+        "MAKE_API_KEY": "your_api_key",
+        "MAKE_API_URL": "https://eu1.make.com/api/v2",
         "MAKE_TEAM_ID": "your_team_id"
       }
     }
@@ -173,208 +39,90 @@ npm start
 }
 ```
 
-> **Note:** The Make.com API credentials are optional. Without them, you'll have access to all documentation, search, and validation tools. With them, you'll additionally get scenario deployment capabilities.
+Without `MAKE_API_KEY`, all module search/validation tools still work. Only CRUD and run tools require it.
 
----
+## All 16 Tools
 
-### Configuration File Locations
-
-| Platform | Path |
-|----------|------|
-| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Linux | `~/.config/Claude/claude_desktop_config.json` |
-
-**Restart Claude Desktop after updating configuration.**
-
----
-
-### 💻 Connect Your IDE
-
-make-mcp-server works with any MCP-compatible client:
-
-- **Claude Desktop** — See configurations above
-- **VS Code (GitHub Copilot)** — Add to `.vscode/mcp.json`
-- **Cursor** — Add to MCP settings
-- **Claude Code** — Use `claude mcp add` command
-- **Windsurf** — Add to MCP configuration
-
----
-
-## Usage
-
-Then ask your AI assistant things like:
-
-> "Create a Make scenario that watches a Slack channel for new messages and logs them to a Google Sheet"
-
-> "What modules does Make have for sending emails?"
-
-> "Validate this scenario blueprint..."
-
-**Tip:** The AI will automatically call `tools_documentation` first to understand how to use the server effectively.
-
-## Available Tools
+### Module Intelligence
 
 | Tool | Description |
 |------|-------------|
-| `tools_documentation` | **START HERE** — Returns comprehensive documentation for all tools, prompts, and resources |
+| `tools_documentation` | **START HERE** — docs for all tools, prompts, resources |
 | `search_modules` | Full-text search across 200+ Make.com modules |
-| `get_module` | Get detailed module info with parameters and docs |
-| `check_account_compatibility` | Check if modules are available in your current Make account/region (with suggestions) |
-| `validate_scenario` | Validate a scenario blueprint before deployment |
-| `create_scenario` | Deploy a scenario to Make.com via API |
-| `search_templates` | Search reusable scenario templates |
+| `get_module` | Detailed module info with parameters and docs |
 | `list_apps` | List all apps with module counts |
+| `check_account_compatibility` | Verify modules work in your account/region |
+
+### Scenario Building
+
+| Tool | Description |
+|------|-------------|
+| `validate_scenario` | Validate a blueprint before deployment |
+| `create_scenario` | Deploy a scenario with auto-healing |
+| `search_templates` | Browse reusable scenario templates |
+
+### Scenario Management (CRUD)
+
+| Tool | Description |
+|------|-------------|
+| `list_scenarios` | List all scenarios in your team |
+| `get_scenario` | Get scenario details by ID |
+| `get_scenario_blueprint` | Get the full blueprint JSON |
+| `update_scenario` | Update name, blueprint, scheduling, or folder |
+| `delete_scenario` | Permanently delete a scenario |
+
+### Scenario Control
+
+| Tool | Description |
+|------|-------------|
+| `activate_scenario` | Activate a scenario |
+| `deactivate_scenario` | Stop a running scenario |
+| `run_scenario` | Execute a scenario by ID with optional input data |
 
 ## Auto-Healing
 
-The `create_scenario` tool automatically fixes common issues in LLM-generated blueprints:
+The `create_scenario` tool automatically fixes common issues in AI-generated blueprints:
 
 | Issue | Auto-Fix |
 |-------|----------|
-| Missing `metadata` section | Injects full metadata with `version`, `scenario` config, and `designer` |
-| Missing `metadata.designer` on modules | Adds `{ x: 0, y: 0 }` coordinates |
-| Router `filter` in route objects | Strips unsupported `filter` property (configure filters in Make.com UI) |
-| Missing `version` on modules | Left unset — Make.com auto-resolves the latest installed version |
-| Catalog mismatch (`IM007`, module not available) | Checks live modules in your account/region, auto-remaps close matches, retries deploy once |
+| Missing `metadata` | Injects full metadata block |
+| Missing designer coordinates | Adds `{ x: 0, y: 0 }` to all modules |
+| Router `filter` in routes | Strips unsupported property (configure in Make UI) |
+| Schedule modules in flow | Converts to scenario-level scheduling |
+| Wrong module versions | Injects verified versions, strips unknowns |
+| Module not found (IM007) | 5-retry strategy with version fallback |
 
-> **Tip:** Do NOT hardcode `"version": 1` on modules. Some apps (e.g., HTTP) are on v4+ and specifying the wrong version causes "Module not found" errors.
-
-## MCP Prompts
+## Prompts & Resources
 
 | Prompt | Description |
 |--------|-------------|
-| `build_scenario` | Guided workflow for creating a Make.com scenario from a natural language description |
-| `explain_module` | Get a detailed explanation of any Make.com module with usage examples |
+| `build_scenario` | Guided scenario creation workflow |
+| `explain_module` | Detailed module explanation with examples |
 
-## MCP Resources
-
-| Resource URI | Description |
-|-------------|-------------|
-| `make://apps` | List of all available apps with module counts |
-
-## CLI Usage
-
-```bash
-make-mcp-server              # Start the MCP server (stdio transport)
-make-mcp-server --scrape     # Populate/refresh the module database
-make-mcp-server --version    # Print version
-make-mcp-server --help       # Show help
-```
+| Resource | Description |
+|----------|-------------|
+| `make://apps` | App catalog with module counts |
 
 ## Environment Variables
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `MAKE_API_KEY` | For deployment | — | Make.com API key |
-| `MAKE_API_URL` | No | `https://eu1.make.com/api/v2` | Make.com API base URL |
-| `MAKE_TEAM_ID` | For deployment | — | Default team ID for scenario deployment |
-| `DATABASE_PATH` | No | `<package>/data/make-modules.db` | SQLite database file path |
-| `LOG_LEVEL` | No | `info` | Logging level: `debug`, `info`, `warn`, `error`, `silent` |
-| `MAKE_MODULE_CACHE_TTL_MS` | No | `300000` | Cache TTL for live module catalog checks (milliseconds) |
+| `MAKE_API_KEY` | For CRUD/run | — | Make.com API key |
+| `MAKE_API_URL` | No | `https://eu1.make.com/api/v2` | API base URL (include zone) |
+| `MAKE_TEAM_ID` | For CRUD | — | Team ID |
+| `DATABASE_PATH` | No | `<package>/data/make-modules.db` | SQLite DB path |
+| `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error`, `silent` |
 
 ## Development
 
 ```bash
-npm run build         # Compile TypeScript + copy schema + add shebang
-npm run build:tsc     # TypeScript only (no packaging)
-npm run start:dev     # Start with tsx (no build needed)
-npm run dev           # Start with file watching
-npm run scrape        # Populate DB with tsx (dev)
-npm run scrape:prod   # Populate DB from compiled JS
-npm run smoke:compat  # One-command account compatibility + validation smoke check
-npm test              # Run all 43 tests
-npm run test:watch    # Run tests in watch mode
+npm install && npm run build    # Build
+npm test                        # Run 44 tests
+npm run start:dev               # Dev mode (tsx)
 ```
 
-### Publishing to npm
+## Credits
 
-```bash
-npm run prepublishOnly   # Build + populate DB + verify (runs automatically on npm publish)
-npm publish              # Publish to npm registry
-```
+Original server by [Daniel Shashko](https://github.com/danishashko/make-mcp). CRUD tools added by [D1DX](https://github.com/D1DX).
 
-## Testing
-
-The test suite includes 43 tests across 3 files:
-
-- **Database tests** (14 tests) — Insert, search, template operations, FTS5 queries
-- **Logger tests** (7 tests) — Stderr-only output, log levels, data serialization
-- **Server integration tests** (22 tests) — Full MCP protocol compliance via SDK client
-
-```bash
-npm test
-```
-
-### Fast Verification (2-3 minutes)
-
-Use this when you just changed validation/deploy logic and want confidence quickly:
-
-```bash
-# 1) Fast regression check
-npm test
-
-# 2) One-command smoke check (compatibility + validation)
-npm run smoke:compat
-
-# 3) (Optional) Manual MCP exploration
-npm run start:dev
-```
-
-Then in your MCP client (Claude/Cursor/Copilot), run this sequence:
-
-1. `check_account_compatibility` with a known module, e.g. `gateway:CustomWebHook`
-2. `validate_scenario` with your blueprint
-3. `create_scenario` only if compatibility is good
-
-If step 1 reports incompatible modules, use the suggested replacement IDs before deploying.
-
-## Architecture
-
-```
-src/
-├── mcp/
-│   └── server.ts          # MCP server with tools, prompts, resources
-├── database/
-│   ├── schema.sql         # SQLite + FTS5 schema
-│   └── db.ts              # Database access layer (npx-safe path resolution)
-├── scrapers/
-│   └── scrape-modules.ts  # Module data population (224 modules)
-└── utils/
-    └── logger.ts          # Structured stderr-only logger
-bin/
-├── make-mcp.js            # CLI entry point (npx, --help, --version, --scrape)
-└── postinstall.js         # Post-install verification
-scripts/
-├── build.js               # Build: tsc + copy schema + add shebang
-├── prepublish.js          # Publish prep: build + populate DB + verify
-└── smoke-compat.js        # Fast local smoke test for module compatibility + validation
-data/
-└── make-modules.db        # Pre-built SQLite database (bundled in npm package)
-tests/
-├── database.test.ts       # Database unit tests (14)
-├── logger.test.ts         # Logger unit tests (7)
-└── server.test.ts         # MCP integration tests (22)
-Dockerfile                 # Multi-stage Docker image
-```
-
-## Tech Stack
-
-- **TypeScript** + **Node.js** (ESM)
-- **@modelcontextprotocol/sdk** v1.26.0 — MCP protocol implementation
-- **better-sqlite3** — Synchronous SQLite with FTS5 full-text search
-- **zod** — Schema validation for tool parameters
-- **axios** — HTTP client for Make.com API
-- **vitest** — Test framework
-
-## Supported Apps (40+)
-
-Google Sheets, Slack, OpenAI, Google Drive, Notion, Telegram Bot, HubSpot CRM, Gmail, Airtable, Tools, Flow Control, Google Calendar, Jira, Trello, Shopify, Google Docs, Microsoft Teams, Microsoft Outlook, Discord, Asana, monday.com, Salesforce, Stripe, GitHub, HTTP, Mailchimp, WordPress, Dropbox, Data Store, JSON, Twilio, Google Gemini AI, WhatsApp Business, Text Parser, Webhooks, Anthropic Claude, CSV, RSS, Email, Schedule
-
-## Author
-
-Built by **[Daniel Shashko](https://www.linkedin.com/in/daniel-shashko/)**
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License.
