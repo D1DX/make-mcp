@@ -51,11 +51,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danishashko/make-mcp.git"
+    "url": "git+https://github.com/D1DX/make-mcp.git"
   },
-  "homepage": "https://github.com/danishashko/make-mcp#readme",
+  "homepage": "https://github.com/D1DX/make-mcp#readme",
   "bugs": {
-    "url": "https://github.com/danishashko/make-mcp/issues"
+    "url": "https://github.com/D1DX/make-mcp/issues"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
