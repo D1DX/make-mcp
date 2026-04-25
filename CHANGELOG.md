@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-25
+
+### Fixed
+- **Orphan process CPU leak** — `make-mcp-server` children were left running at 90%+ CPU after the MCP host (Claude Code, etc.) exited uncleanly. Parent death is now detected via two paths: `process.stdin` `end`/`close` events (fires immediately when the stdio pipe breaks) and a 5-second `ppid === 1` poll (defense-in-depth for platforms where pipe-close behavior is inconsistent). Orphans now exit within milliseconds of parent death.
+
 ## [1.3.1] - 2026-02-07
 
 ### Fixed
