@@ -1965,6 +1965,25 @@ async function main() {
         logger.error('Unhandled rejection', { error: reason?.message || String(reason) });
     });
 
+    // Parent-death watchdog: when a Claude Code / MCP host dies uncleanly,
+    // children are re-parented to init (ppid=1) and never receive a signal.
+    // Detect via stdin close (pipe broken) and ppid polling, then exit.
+    process.stdin.on('end', () => {
+        logger.info('stdin ended, parent gone — exiting');
+        shutdown();
+    });
+    process.stdin.on('close', () => {
+        logger.info('stdin closed, parent gone — exiting');
+        shutdown();
+    });
+    const orphanWatcher = setInterval(() => {
+        if (process.ppid === 1) {
+            logger.info('orphaned (ppid=1) — exiting');
+            shutdown();
+        }
+    }, 5000);
+    orphanWatcher.unref();
+
     await server.connect(transport);
     logger.info(`Make MCP server v${VERSION} running on stdio`, {
         modules: db.searchModules('*').length,
