@@ -1961,8 +1961,22 @@ async function main() {
         logger.error('Uncaught exception', { error: err.message, stack: err.stack });
         shutdown();
     });
+    // Bound any rejection storm. A broken stdio pipe can cause the MCP SDK to
+    // emit parse errors on every event-loop tick; without this cap the handler
+    // would spin at 100% CPU forever (logging without exiting).
+    let rejectCount = 0;
+    let rejectWindowStart = Date.now();
     process.on('unhandledRejection', (reason: any) => {
         logger.error('Unhandled rejection', { error: reason?.message || String(reason) });
+        const now = Date.now();
+        if (now - rejectWindowStart > 10_000) {
+            rejectCount = 0;
+            rejectWindowStart = now;
+        }
+        if (++rejectCount > 50) {
+            logger.error('Unhandled rejection storm (>50 in 10s) — exiting');
+            shutdown();
+        }
     });
 
     // Parent-death watchdog: when a Claude Code / MCP host dies uncleanly,
@@ -1976,9 +1990,20 @@ async function main() {
         logger.info('stdin closed, parent gone — exiting');
         shutdown();
     });
+    // Half-closed Unix socket case (orphan-of-orphan): when grandparent dies
+    // but the immediate parent (e.g. `npm exec` wrapper) survives, ppid stays
+    // != 1 and Node does not emit 'end'/'close' for the half-closed socket.
+    // Stream-error events still fire — catch them and exit immediately.
+    process.stdin.on('error', (err: any) => {
+        logger.info(`stdin error (parent stdio broken) — exiting: ${err?.code || err?.message}`);
+        shutdown();
+    });
     const orphanWatcher = setInterval(() => {
         if (process.ppid === 1) {
             logger.info('orphaned (ppid=1) — exiting');
+            shutdown();
+        } else if (process.stdin.destroyed || process.stdin.readableEnded) {
+            logger.info('stdin destroyed/ended (orphan-of-orphan) — exiting');
             shutdown();
         }
     }, 5000);

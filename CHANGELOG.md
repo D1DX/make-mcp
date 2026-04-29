@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.1] - 2026-04-29
+
+### Fixed
+- **Orphan-of-orphan CPU leak** — `make-mcp-server` was still able to spin at 100% CPU when its grandparent (e.g. a Claude Code session) died but the immediate parent (the `npm exec` wrapper) survived. In that state `process.ppid !== 1` (so the v1.4.0 ppid watcher never fires) and the half-closed Unix socket backing stdin emits `error` events on every event-loop tick instead of `'end'`/`'close'` (so the v1.4.0 stdin-close handler never fires either). Three additive guards now catch the case: (1) a `process.stdin.on('error', ...)` listener exits on the first read error; (2) the existing 5-second watcher also checks `process.stdin.destroyed || process.stdin.readableEnded`; (3) the `unhandledRejection` handler now caps rejection storms at 50-per-10s and exits, so any future similar bug self-terminates instead of burning CPU forever.
+
 ## [1.4.0] - 2026-04-25
 
 ### Fixed
