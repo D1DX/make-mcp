@@ -34,11 +34,24 @@ parentPort?.on('message', (msg) => {
     if (msg === 'heartbeat') lastHeartbeat = Date.now();
 });
 
+// IMPORTANT: process.exit() from a worker thread ONLY exits the worker,
+// NOT the parent process. To terminate the whole process from a worker,
+// signal it directly: process.kill(process.pid, 'SIGKILL'). process.pid
+// in a worker returns the parent process's PID (workers share the process).
+// SIGTERM would race with the hung main thread's signal handlers, so SIGKILL.
+function killWholeProcess(reason: string): void {
+    process.stderr.write(`[watchdog] ${reason} — SIGKILL self\n`);
+    try {
+        process.kill(process.pid, 'SIGKILL');
+    } catch {
+        // SIGKILL on self should always succeed; defensive catch only
+    }
+}
+
 setInterval(() => {
     // Main-thread liveness
     if (Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT_MS) {
-        process.stderr.write('[watchdog] main thread unresponsive >10s — exiting process\n');
-        process.exit(2);
+        killWholeProcess('main thread unresponsive >10s');
     }
     // Grandparent liveness
     if (grandparentPid !== null) {
@@ -46,8 +59,7 @@ setInterval(() => {
             process.kill(grandparentPid, 0);
         } catch (e: any) {
             if (e?.code === 'ESRCH') {
-                process.stderr.write(`[watchdog] grandparent (pid=${grandparentPid}) died — exiting process\n`);
-                process.exit(3);
+                killWholeProcess(`grandparent (pid=${grandparentPid}) died`);
             }
             // EPERM means PID alive but not ours (recycled to another user) — treat as alive.
         }
