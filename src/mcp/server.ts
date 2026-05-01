@@ -23,6 +23,8 @@ import { logger } from '../utils/logger.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
+import { Worker } from 'worker_threads';
 
 dotenv.config({ quiet: true });
 
@@ -1943,8 +1945,13 @@ server.registerResource('apps-catalog', 'make://apps', {
 async function main() {
     const transport = new StdioServerTransport();
 
-    // Graceful shutdown
+    // Idempotent shutdown — multiple watchers can fire near-simultaneously
+    // (stdin error + grandparent death + CPU watchdog all in the same tick),
+    // so guard with a flag to prevent double db.close() / server.close().
+    let isShuttingDown = false;
     const shutdown = async () => {
+        if (isShuttingDown) return;
+        isShuttingDown = true;
         logger.info('Shutting down Make MCP server...');
         try {
             db.close();
@@ -1979,9 +1986,14 @@ async function main() {
         }
     });
 
-    // Parent-death watchdog: when a Claude Code / MCP host dies uncleanly,
-    // children are re-parented to init (ppid=1) and never receive a signal.
-    // Detect via stdin close (pipe broken) and ppid polling, then exit.
+    // ──────────────────────────────────────────────────────────
+    // Watcher set 1 (v1.4.0 + v1.4.1): stdin events + ppid==1 +
+    // stdin.destroyed/readableEnded polling.
+    //
+    // Catches: direct orphans (Claude→server, ppid==1) and the
+    // orphan-of-orphan variant where the half-close surfaces as
+    // a stdin 'error' event or transitions destroyed/readableEnded.
+    // ──────────────────────────────────────────────────────────
     process.stdin.on('end', () => {
         logger.info('stdin ended, parent gone — exiting');
         shutdown();
@@ -1990,10 +2002,6 @@ async function main() {
         logger.info('stdin closed, parent gone — exiting');
         shutdown();
     });
-    // Half-closed Unix socket case (orphan-of-orphan): when grandparent dies
-    // but the immediate parent (e.g. `npm exec` wrapper) survives, ppid stays
-    // != 1 and Node does not emit 'end'/'close' for the half-closed socket.
-    // Stream-error events still fire — catch them and exit immediately.
     process.stdin.on('error', (err: any) => {
         logger.info(`stdin error (parent stdio broken) — exiting: ${err?.code || err?.message}`);
         shutdown();
@@ -2008,6 +2016,72 @@ async function main() {
         }
     }, 5000);
     orphanWatcher.unref();
+
+    // ──────────────────────────────────────────────────────────
+    // Watcher set 2 (v1.4.2): out-of-process Worker thread watchdog.
+    //
+    // Why a worker thread? When the orphan-of-orphan variants cause a
+    // tight read-poll loop on a half-closed stdio pipe, the main thread
+    // event loop is starved — all setInterval/setTimeout callbacks
+    // (including watcher set 1) never fire. A Worker thread runs its
+    // own event loop in parallel and can call process.exit() to terminate
+    // the whole process even when main is hung. Verified empirically
+    // 2026-05-01: a v1.4.2 build that put these checks in setInterval
+    // failed to kill a 99.5%-CPU process even after 12s — the worker
+    // version exits within 10s.
+    //
+    // The worker performs two checks every 2s:
+    //   1. Heartbeat from main — main posts 'heartbeat' every 1s. If
+    //      worker doesn't receive one for >10s, main is hung — exit.
+    //   2. Grandparent kill-0 — process.kill(grandparentPid, 0). ESRCH
+    //      means the actual MCP host (Claude Code, etc.) died — exit.
+    //      Catches the orphan-of-orphan-with-live-wrapper case where
+    //      ppid stays != 1 and stdin events never fire.
+    // ──────────────────────────────────────────────────────────
+
+    // Capture the grandparent PID via the wrapper's PPID. Best-effort —
+    // macOS/Linux ship `ps` with -o ppid= support. If capture fails
+    // (Windows, missing ps, race during fork) we still get heartbeat
+    // protection.
+    let grandparentPid: number | null = null;
+    try {
+        const wrapperPid = process.ppid;
+        if (wrapperPid && wrapperPid !== 1) {
+            const out = execSync(`ps -o ppid= -p ${wrapperPid}`, {
+                stdio: ['ignore', 'pipe', 'ignore'],
+                timeout: 2000,
+            }).toString().trim();
+            const parsed = parseInt(out, 10);
+            if (Number.isFinite(parsed) && parsed > 1) {
+                grandparentPid = parsed;
+            }
+        }
+    } catch {
+        // Capture failed — heartbeat watchdog still works.
+    }
+
+    try {
+        const watchdogPath = path.join(
+            path.dirname(fileURLToPath(import.meta.url)),
+            '..',
+            'watchdog',
+            'watchdog.js',
+        );
+        const watchdog = new Worker(watchdogPath, {
+            workerData: { grandparentPid },
+        });
+        watchdog.unref();
+        watchdog.on('error', (err: Error) => {
+            logger.warn(`watchdog worker error: ${err.message}`);
+        });
+        const heartbeat = setInterval(() => {
+            try { watchdog.postMessage('heartbeat'); } catch { /* worker exited */ }
+        }, 1000);
+        heartbeat.unref();
+        logger.info(`watchdog worker armed (grandparent pid=${grandparentPid ?? 'unknown'})`);
+    } catch (err: any) {
+        logger.warn(`watchdog worker failed to start: ${err?.message} — orphan-mode-3 protection disabled`);
+    }
 
     await server.connect(transport);
     logger.info(`Make MCP server v${VERSION} running on stdio`, {

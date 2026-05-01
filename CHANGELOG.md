@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.2] - 2026-05-01
+
+### Fixed
+- **Orphan-of-orphan CPU/RAM leak (third variant)** — `make-mcp-server` could still leak (idle ~11 MB RSS, hot up to ~520 MB + 100%+ CPU) when the `npm exec` wrapper survived its grandparent (e.g. a Claude Code session crash) AND the half-closed pipe never surfaced as a `'error'` event on stdin. In this state every v1.4.1 watcher is structurally blind: stdin event handlers never fire, `process.ppid !== 1` (wrapper alive), `stdin.destroyed` and `stdin.readableEnded` both stay `false`, and the SDK's stdio transport at `@modelcontextprotocol/sdk/dist/esm/server/stdio.js:43-45` catches parse errors synchronously and routes them to `Server.onerror?.()` which is undefined — so the rejection storm cap is unreachable. Three new guards close the gap: (1) **grandparent kill-0 probe** — capture the wrapper's parent PID at boot via `ps -o ppid= -p $PPID`, then poll every 5s with `process.kill(pid, 0)` and exit on `ESRCH`; works on macOS/Linux out of the box, Windows falls back to (2); (2) **CPU self-watchdog** — `process.cpuUsage()` delta sampled every 30s, exit when sustained >80% over 90s (3 consecutive samples) — defense in depth that catches any future variant; (3) **`shutdown()` idempotency guard** — pre-existing latent bug where multiple watchers firing in the same tick would both reach `db.close()` (synchronous, throws on double-close — was suppressed by `catch {}`); now guarded by `isShuttingDown` flag.
+- **Cleanup command** — kill BOTH layers when manually clearing orphans: `pkill -9 -f make-mcp-server && pkill -9 -f "npm exec github:D1DX/make-mcp"`. Killing only the children leaves the wrappers alive ready to spawn again.
+
 ## [1.4.1] - 2026-04-29
 
 ### Fixed

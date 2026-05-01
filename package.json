@@ -1,6 +1,6 @@
 {
   "name": "make-mcp-server",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "mcpName": "io.github.danishashko/make-mcp",
   "description": "Unofficial MCP server for Make.com — build, validate & deploy automation scenarios via AI (community project, not affiliated with Make.com)",
   "main": "dist/mcp/server.js",
