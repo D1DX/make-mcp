@@ -1,131 +1,83 @@
-# Make.com MCP Server — Full CRUD + Module Intelligence
+# D1DX/make-mcp — RETIRED 2026-05-08
 
-[![Author](https://img.shields.io/badge/Author-Daniel_Rudaev-000000?style=flat)](https://github.com/daniel-rudaev)
-[![Studio](https://img.shields.io/badge/Studio-D1DX-000000?style=flat)](https://d1dx.com)
-[![Make.com](https://img.shields.io/badge/Make.com-MCP_Server-6D00CC?style=flat&logo=make&logoColor=white)](https://www.make.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat)](./LICENSE)
+> **This stdio-fork MCP server is no longer maintained.** Migrate to the official Make.com cloud MCP.
 
-> **D1DX fork** of [danishashko/make-mcp](https://github.com/danishashko/make-mcp). Adds full scenario CRUD, run, activate/deactivate. Original module search, validation, and auto-healing preserved.
+---
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for **complete Make.com scenario management** from AI assistants (Claude, Copilot, Cursor). 16 tools covering module discovery, blueprint validation, scenario CRUD, execution, and deployment with auto-healing.
+## Why retired
 
-## What's Different from the Original
+Three orphan-storm failure modes (1–3) were patched in v1.4.0–v1.4.2, but a fourth mode (libuv read-callback CPU loop on macOS Sequoia) emerged in v1.4.2 and proved difficult to detect from inside the runaway process. Rather than continue patching a stdio-spawn-based architecture, D1DX migrated all its MCP consumers to Make.com's first-party cloud MCP (Streamable HTTP, no spawned processes).
 
-| Capability | Original | This Fork |
-|-----------|----------|-----------|
-| Search modules | Yes | Yes |
-| Validate blueprints | Yes | Yes |
-| Create scenarios | Yes | Yes (with auto-healing) |
-| List scenarios | No | **Yes** |
-| Get scenario details | No | **Yes** |
-| Get scenario blueprint | No | **Yes** |
-| Update scenarios | No | **Yes** |
-| Delete scenarios | No | **Yes** |
-| Activate/deactivate | No | **Yes** |
-| Run scenarios | No | **Yes** |
+## How to migrate
 
-## Quick Start
+Make.com publishes an official Streamable HTTP MCP at:
+
+- `https://eu1.make.com/mcp/stateless` (EU1 region)
+- `https://eu2.make.com/mcp/stateless` (EU2 region)
+
+Auth is `Authorization: Bearer <MAKE_API_KEY>` (mint at https://www.make.com/en/help/api/working-with-tokens).
+
+### Claude Code (`.mcp.json`)
 
 ```json
 {
   "mcpServers": {
     "make": {
-      "command": "npx",
-      "args": ["-y", "github:D1DX/make-mcp"],
-      "env": {
-        "MAKE_API_KEY": "your_api_key",
-        "MAKE_API_URL": "https://eu1.make.com/api/v2",
-        "MAKE_TEAM_ID": "your_team_id"
+      "type": "http",
+      "url": "https://eu1.make.com/mcp/stateless",
+      "headers": {
+        "Authorization": "Bearer <MAKE_API_KEY>"
       }
     }
   }
 }
 ```
 
-Without `MAKE_API_KEY`, all module search/validation tools still work. Only CRUD and run tools require it.
+### Codex (`.codex/config.toml`)
 
-## All 16 Tools
+```toml
+[mcp_servers.make]
+url = "https://eu1.make.com/mcp/stateless"
 
-### Module Intelligence
-
-| Tool | Description |
-|------|-------------|
-| `tools_documentation` | **START HERE** — docs for all tools, prompts, resources |
-| `search_modules` | Full-text search across 200+ Make.com modules |
-| `get_module` | Detailed module info with parameters and docs |
-| `list_apps` | List all apps with module counts |
-| `check_account_compatibility` | Verify modules work in your account/region |
-
-### Scenario Building
-
-| Tool | Description |
-|------|-------------|
-| `validate_scenario` | Validate a blueprint before deployment |
-| `create_scenario` | Deploy a scenario with auto-healing |
-| `search_templates` | Browse reusable scenario templates |
-
-### Scenario Management (CRUD)
-
-| Tool | Description |
-|------|-------------|
-| `list_scenarios` | List all scenarios in your team |
-| `get_scenario` | Get scenario details by ID |
-| `get_scenario_blueprint` | Get the full blueprint JSON |
-| `update_scenario` | Update name, blueprint, scheduling, or folder |
-| `delete_scenario` | Permanently delete a scenario |
-
-### Scenario Control
-
-| Tool | Description |
-|------|-------------|
-| `activate_scenario` | Activate a scenario |
-| `deactivate_scenario` | Stop a running scenario |
-| `run_scenario` | Execute a scenario by ID with optional input data |
-
-## Auto-Healing
-
-The `create_scenario` tool automatically fixes common issues in AI-generated blueprints:
-
-| Issue | Auto-Fix |
-|-------|----------|
-| Missing `metadata` | Injects full metadata block |
-| Missing designer coordinates | Adds `{ x: 0, y: 0 }` to all modules |
-| Router `filter` in routes | Strips unsupported property (configure in Make UI) |
-| Schedule modules in flow | Converts to scenario-level scheduling |
-| Wrong module versions | Injects verified versions, strips unknowns |
-| Module not found (IM007) | 5-retry strategy with version fallback |
-
-## Prompts & Resources
-
-| Prompt | Description |
-|--------|-------------|
-| `build_scenario` | Guided scenario creation workflow |
-| `explain_module` | Detailed module explanation with examples |
-
-| Resource | Description |
-|----------|-------------|
-| `make://apps` | App catalog with module counts |
-
-## Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MAKE_API_KEY` | For CRUD/run | — | Make.com API key |
-| `MAKE_API_URL` | No | `https://eu1.make.com/api/v2` | API base URL (include zone) |
-| `MAKE_TEAM_ID` | For CRUD | — | Team ID |
-| `DATABASE_PATH` | No | `<package>/data/make-modules.db` | SQLite DB path |
-| `LOG_LEVEL` | No | `info` | `debug`, `info`, `warn`, `error`, `silent` |
-
-## Development
-
-```bash
-npm install && npm run build    # Build
-npm test                        # Run 44 tests
-npm run start:dev               # Dev mode (tsx)
+[mcp_servers.make.http_headers]
+Authorization = "Bearer <MAKE_API_KEY>"
 ```
 
-## Credits
+### Gemini CLI (`.gemini/settings.json`)
 
-Original server by [Daniel Shashko](https://github.com/danishashko/make-mcp). CRUD tools added by [D1DX](https://github.com/D1DX).
+```json
+{
+  "mcpServers": {
+    "make": {
+      "httpUrl": "https://eu1.make.com/mcp/stateless",
+      "headers": {
+        "Authorization": "Bearer <MAKE_API_KEY>"
+      }
+    }
+  }
+}
+```
 
-MIT License — Copyright (c) 2026 Daniel Rudaev @ D1DX
+## Stub behavior
+
+Any `npx -y github:D1DX/make-mcp` install of this repo (version `99.0.0-retired`) will:
+
+1. Print a deprecation banner to stderr during `postinstall` (exit 0 so package managers don't crash).
+2. Print the same banner and exit 1 on any subsequent `make-mcp-server` invocation.
+
+The stub has no dependencies and no build step.
+
+## Historical reference
+
+For the orphan-storm investigation that drove this retirement, see `tasks/NO-ID (make-mcp-orphan-research)/` in [D1DX/d1dx](https://github.com/D1DX/d1dx). The four documented failure modes:
+
+| Mode | Trigger | Fix attempt |
+|------|---------|-------------|
+| 1 | Direct orphan, no wrapper | `70be8d6` (2026-04-25) — stdin-close handler |
+| 2 | Orphan-of-orphan, stdin error event | `95899b1` (2026-04-29, v1.4.1) — bounded rejection counter |
+| 3 | Orphan-of-orphan, no stdin error | `129ba7b` (2026-05-01, v1.4.2) — out-of-process worker watchdog |
+| 4 | libuv read-callback CPU loop on Sequoia (no rejection event, watchdog falsely-live) | unfixed — retired |
+
+## License
+
+MIT (see `LICENSE`).

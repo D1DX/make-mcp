@@ -1,33 +1,30 @@
 /**
- * Postinstall script — verifies database exists.
+ * postinstall — RETIRED 2026-05-08
  *
- * When installed from npm, the pre-built database is bundled in data/make-modules.db.
- * This script just ensures the data directory and DB file are present.
- * If missing (dev/clone scenario), it tells the user how to populate it.
+ * The D1DX/make-mcp stdio fork has been retired. This postinstall
+ * emits a clear deprecation banner to stderr and exits 0 so package
+ * managers do not crash mid-install for unrelated upstream consumers
+ * — but any subsequent `make-mcp-server` invocation will exit 1 with
+ * the migration instructions (see bin/make-mcp.js).
  */
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '..');
+const banner = [
+  '',
+  '================================================================',
+  '  D1DX/make-mcp HAS BEEN RETIRED (2026-05-08)',
+  '================================================================',
+  '',
+  '  Migrate to the official Make.com cloud MCP:',
+  '    https://eu1.make.com/mcp/stateless',
+  '    https://eu2.make.com/mcp/stateless',
+  '',
+  '  Bearer-auth header: Authorization: Bearer <MAKE_API_KEY>',
+  '',
+  '  Any spawn of `make-mcp-server` from this version will exit 1.',
+  '',
+  '================================================================',
+  '',
+].join('\n');
 
-const dataDir = path.join(ROOT, 'data');
-const dbPath = path.join(dataDir, 'make-modules.db');
-
-// Ensure data directory exists
-if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-}
-
-if (fs.existsSync(dbPath)) {
-    const stats = fs.statSync(dbPath);
-    process.stderr.write(`[make-mcp-server] ✅ Database ready (${(stats.size / 1024).toFixed(0)} KB)\n`);
-} else {
-    process.stderr.write(
-        '[make-mcp-server] ⚠️  Database not found. If you cloned from source, run:\n' +
-        '  npm run build && npm run scrape:prod\n' +
-        '  to populate the module database.\n'
-    );
-}
+process.stderr.write(banner);
+process.exit(0);

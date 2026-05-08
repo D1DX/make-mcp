@@ -1,51 +1,25 @@
 {
   "name": "make-mcp-server",
-  "version": "1.4.2",
-  "mcpName": "io.github.danishashko/make-mcp",
-  "description": "Unofficial MCP server for Make.com — build, validate & deploy automation scenarios via AI (community project, not affiliated with Make.com)",
-  "main": "dist/mcp/server.js",
-  "types": "dist/mcp/server.d.ts",
+  "version": "99.0.0-retired",
+  "description": "RETIRED 2026-05-08 — use the official Make.com cloud MCP at https://eu1.make.com/mcp/stateless",
   "type": "module",
   "bin": {
     "make-mcp-server": "./bin/make-mcp.js"
   },
   "files": [
-    "dist/",
-    "data/make-modules.db",
     "bin/",
-    "scripts/",
-    "src/database/schema.sql",
     "README.md",
-    "LICENSE",
-    ".env.example"
+    "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/build.js",
-    "build:tsc": "tsc",
-    "start": "node dist/mcp/server.js",
-    "start:dev": "tsx src/mcp/server.ts",
-    "scrape": "tsx src/scrapers/scrape-modules.ts",
-    "scrape:prod": "node dist/scrapers/scrape-modules.js",
-    "dev": "tsx watch src/mcp/server.ts",
-    "smoke:compat": "node scripts/smoke-compat.js",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prepare": "npm run build",
-    "prepublishOnly": "node scripts/prepublish.js",
     "postinstall": "node bin/postinstall.js"
   },
   "keywords": [
-    "mcp",
+    "retired",
+    "deprecated",
     "make",
     "make.com",
-    "integromat",
-    "automation",
-    "scenario",
-    "ai",
-    "llm",
-    "model-context-protocol",
-    "claude",
-    "copilot"
+    "mcp"
   ],
   "author": "Daniel Shashko (https://www.linkedin.com/in/daniel-shashko/)",
   "license": "MIT",
@@ -56,19 +30,5 @@
   "homepage": "https://github.com/D1DX/make-mcp#readme",
   "bugs": {
     "url": "https://github.com/D1DX/make-mcp/issues"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.26.0",
-    "axios": "^1.13.4",
-    "better-sqlite3": "^12.6.2",
-    "dotenv": "^17.2.4",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^25.2.1",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
   }
 }

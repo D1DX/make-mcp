@@ -1,78 +1,47 @@
 #!/usr/bin/env node
 
 /**
- * make-mcp-server CLI entry point
+ * make-mcp-server — RETIRED 2026-05-08
  *
- * Usage:
- *   npx make-mcp-server                    — Start MCP server on stdio
- *   npx make-mcp-server --scrape           — Populate/refresh the module database
- *   npx make-mcp-server --version          — Print version
- *   npx make-mcp-server --help             — Show help
+ * The D1DX/make-mcp stdio fork has been retired in favor of the
+ * official Make.com cloud MCP at https://eu1.make.com/mcp/stateless
+ * (or https://eu2.make.com/mcp/stateless for EU2 regions).
+ *
+ * Three orphan-storm failure modes (modes 1–3) were patched, but a
+ * fourth mode (libuv read-callback CPU loop) emerged in v1.4.2 and
+ * proved difficult to detect from inside the runaway process.
+ *
+ * Migration:
+ *   - Claude Code: { "type": "http", "url": "https://eu1.make.com/mcp/stateless",
+ *                    "headers": { "Authorization": "Bearer <MAKE_API_KEY>" } }
+ *   - Codex:       [mcp_servers.make] url = "..."; http_headers = { Authorization = "Bearer ..." }
+ *   - Gemini:      "httpUrl": "https://eu1.make.com/mcp/stateless", "headers": { ... }
+ *
+ * This stub exits non-zero so any stale spawn surfaces loudly. Any
+ * downstream caller still wired to `npx -y github:D1DX/make-mcp` should
+ * migrate to the cloud MCP per the snippet above.
  */
 
-import { fileURLToPath, pathToFileURL } from 'url';
-import path from 'path';
-import fs from 'fs';
+const message = [
+  '',
+  '================================================================',
+  '  D1DX/make-mcp HAS BEEN RETIRED (2026-05-08)',
+  '================================================================',
+  '',
+  '  The stdio-fork make-mcp-server is no longer maintained and',
+  '  must not be invoked. Use the official Make.com cloud MCP:',
+  '',
+  '    https://eu1.make.com/mcp/stateless   (EU1)',
+  '    https://eu2.make.com/mcp/stateless   (EU2)',
+  '',
+  '  Auth: Authorization: Bearer <MAKE_API_KEY>',
+  '',
+  '  See https://github.com/D1DX/make-mcp/blob/main/README.md for',
+  '  the migration snippet for Claude Code, Codex, and Gemini.',
+  '',
+  '================================================================',
+  '',
+].join('\n');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const args = process.argv.slice(2);
-
-if (args.includes('--version') || args.includes('-v')) {
-    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8'));
-    process.stderr.write(`make-mcp-server v${pkg.version}\n`);
-    process.exit(0);
-}
-
-if (args.includes('--help') || args.includes('-h')) {
-    process.stderr.write(`
-make-mcp-server — MCP server for Make.com automation scenarios
-
-Usage:
-  make-mcp-server              Start the MCP server (stdio transport)
-  make-mcp-server --scrape     Populate/refresh the module database
-  make-mcp-server --version    Print version
-  make-mcp-server --help       Show this help
-
-Environment Variables:
-  MAKE_API_KEY          Make.com API key (required for deployment)
-  MAKE_API_URL          Make.com API base URL (default: https://eu1.make.com/api/v2)
-  MAKE_TEAM_ID          Default team ID for scenario deployment
-  DATABASE_PATH         SQLite database path (default: ./data/make-modules.db)
-  LOG_LEVEL             Logging level: debug, info, warn, error, silent (default: info)
-
-Claude Desktop Config:
-  {
-    "mcpServers": {
-      "make-mcp-server": {
-        "command": "npx",
-        "args": ["make-mcp-server"],
-        "env": {
-          "MAKE_API_KEY": "your_api_key_here",
-          "MAKE_TEAM_ID": "your_team_id"
-        }
-      }
-    }
-  }
-`);
-    process.exit(0);
-}
-
-if (args.includes('--scrape')) {
-    // Dynamic import of scraper
-    const scraperPath = path.join(__dirname, '..', 'dist', 'scrapers', 'scrape-modules.js');
-    if (!fs.existsSync(scraperPath)) {
-        process.stderr.write('Error: Build the project first with `npm run build`\n');
-        process.exit(1);
-    }
-    await import(pathToFileURL(scraperPath).href);
-} else {
-    // Start MCP server
-    const serverPath = path.join(__dirname, '..', 'dist', 'mcp', 'server.js');
-    if (!fs.existsSync(serverPath)) {
-        process.stderr.write('Error: Build the project first with `npm run build`\n');
-        process.exit(1);
-    }
-    await import(pathToFileURL(serverPath).href);
-}
+process.stderr.write(message);
+process.exit(1);
